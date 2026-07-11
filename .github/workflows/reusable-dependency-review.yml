@@ -11,6 +11,11 @@ on:
         required: false
         type: number
         default: 7
+      bootstrap-mode:
+        description: 기본 브랜치에 dependency graph snapshot이 없는 최초 PR 전용
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -28,6 +33,7 @@ jobs:
 
       - name: 의존성 변경 검토
         id: review
+        if: ${{ !inputs.bootstrap-mode }}
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: ${{ inputs.fail-on-severity }}
@@ -37,6 +43,13 @@ jobs:
           retry-on-snapshot-warnings-timeout: 120
           show-patched-versions: true
           comment-summary-in-pr: never
+
+      - name: 최초 dependency graph bootstrap 확인
+        if: ${{ inputs.bootstrap-mode }}
+        shell: bash
+        run: |
+          echo "최초 PR의 base에는 dependency graph snapshot이 없습니다."
+          echo "이 예외는 caller에 고정된 초기 base SHA에서만 활성화됩니다."
 
       - name: 실패 보고서 생성
         if: ${{ failure() }}

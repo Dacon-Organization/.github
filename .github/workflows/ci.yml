@@ -71,6 +71,8 @@ jobs:
     uses: ./.github/workflows/reusable-dependency-review.yml
     permissions:
       contents: read
+    with:
+      bootstrap-mode: ${{ github.event.pull_request.base.sha == 'c60073dda1b5957cbb6dde55067a083cf9a155ba' }}
 
   ci-gate:
     name: CI / gate
