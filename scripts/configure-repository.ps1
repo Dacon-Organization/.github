@@ -159,7 +159,10 @@ if ($VerifyOnly) {
     AllowedActionPatterns = $AllowedActionPatterns
   }
   & $verifyPath @verifyOnlyParameters
-  exit $LASTEXITCODE
+  if (-not $?) {
+    exit 1
+  }
+  exit 0
 }
 
 $repositoryState = Invoke-GhApi -Endpoint "/repos/$Repository"
@@ -369,7 +372,7 @@ if (-not $WhatIfPreference) {
     AllowLegacyBranchProtection = ($RulesetEnforcement -eq "Disabled")
   }
   & $verifyPath @verifyParameters
-  if ($LASTEXITCODE -ne 0) {
+  if (-not $?) {
     throw "설정 후 검증에 실패했습니다."
   }
 }
