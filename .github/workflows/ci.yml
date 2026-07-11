@@ -28,7 +28,7 @@ jobs:
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           version: 0.11.28
-          enable-cache: true
+          enable-cache: false
 
       - name: 자산 구조와 SHA pin 검증
         run: uv run --with PyYAML==6.0.3 python scripts/validate_assets.py

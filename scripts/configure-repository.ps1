@@ -108,6 +108,32 @@ function Test-StringSetEqual {
   return $difference.Count -eq 0
 }
 
+function Test-GhEndpointEnabled {
+  param([Parameter(Mandatory = $true)] [string] $Endpoint)
+
+  $arguments = @(
+    "api",
+    "--method", "GET",
+    "--silent",
+    "-H", "Accept: application/vnd.github+json",
+    "-H", "X-GitHub-Api-Version: $apiVersion",
+    $Endpoint
+  )
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  $raw = & gh @arguments 2>&1
+  $exitCode = $LASTEXITCODE
+  $ErrorActionPreference = $previousErrorActionPreference
+  $text = ($raw | Out-String).Trim()
+  if ($exitCode -eq 0) {
+    return $true
+  }
+  if ($text -match "HTTP 404") {
+    return $false
+  }
+  throw "GitHub API 실패: GET $Endpoint`n$text"
+}
+
 function Find-StatusCheckIntegrationId {
   param([string[]] $Contexts)
 
@@ -260,6 +286,20 @@ $privateReporting = Invoke-GhApi -Endpoint "/repos/$Repository/private-vulnerabi
 if (-not $privateReporting.enabled) {
   if ($PSCmdlet.ShouldProcess($Repository, "private vulnerability reporting 활성화")) {
     $null = Invoke-GhApi -Endpoint "/repos/$Repository/private-vulnerability-reporting" -Method PUT
+  }
+}
+
+$vulnerabilityAlertsEnabled = Test-GhEndpointEnabled -Endpoint "/repos/$Repository/vulnerability-alerts"
+if (-not $vulnerabilityAlertsEnabled) {
+  if ($PSCmdlet.ShouldProcess($Repository, "dependency graph 및 Dependabot alerts 활성화")) {
+    $null = Invoke-GhApi -Endpoint "/repos/$Repository/vulnerability-alerts" -Method PUT
+  }
+}
+
+$automatedSecurityFixesEnabled = Test-GhEndpointEnabled -Endpoint "/repos/$Repository/automated-security-fixes"
+if (-not $automatedSecurityFixesEnabled) {
+  if ($PSCmdlet.ShouldProcess($Repository, "Dependabot security updates 활성화")) {
+    $null = Invoke-GhApi -Endpoint "/repos/$Repository/automated-security-fixes" -Method PUT
   }
 }
 

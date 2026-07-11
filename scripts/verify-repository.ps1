@@ -83,6 +83,32 @@ function Test-StringSetEqual {
   return @(Compare-Object -ReferenceObject $leftSet -DifferenceObject $rightSet).Count -eq 0
 }
 
+function Test-GhEndpointEnabled {
+  param([Parameter(Mandatory = $true)] [string] $Endpoint)
+
+  $arguments = @(
+    "api",
+    "--method", "GET",
+    "--silent",
+    "-H", "Accept: application/vnd.github+json",
+    "-H", "X-GitHub-Api-Version: $apiVersion",
+    $Endpoint
+  )
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  $raw = & gh @arguments 2>&1
+  $exitCode = $LASTEXITCODE
+  $ErrorActionPreference = $previousErrorActionPreference
+  $text = ($raw | Out-String).Trim()
+  if ($exitCode -eq 0) {
+    return $true
+  }
+  if ($text -match "HTTP 404") {
+    return $false
+  }
+  throw "GitHub API 실패: GET $Endpoint`n$text"
+}
+
 function Add-Check {
   param([bool] $Condition, [string] $Message)
   if (-not $Condition) {
@@ -123,6 +149,8 @@ Add-Check (-not [bool] $workflowPermission.can_approve_pull_request_reviews) "GI
 
 $privateReporting = Invoke-GhGet -Endpoint "/repos/$Repository/private-vulnerability-reporting"
 Add-Check ([bool] $privateReporting.enabled) "private vulnerability reporting이 비활성입니다."
+Add-Check (Test-GhEndpointEnabled -Endpoint "/repos/$Repository/vulnerability-alerts") "dependency graph 또는 Dependabot alerts가 비활성입니다."
+Add-Check (Test-GhEndpointEnabled -Endpoint "/repos/$Repository/automated-security-fixes") "Dependabot security updates가 비활성입니다."
 
 $rulesets = @(
   Invoke-GhGet -Endpoint "/repos/$Repository/rulesets?includes_parents=false&targets=branch&per_page=100"
