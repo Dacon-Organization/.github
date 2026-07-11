@@ -114,7 +114,6 @@ function Test-GhEndpointEnabled {
   $arguments = @(
     "api",
     "--method", "GET",
-    "--silent",
     "-H", "Accept: application/vnd.github+json",
     "-H", "X-GitHub-Api-Version: $apiVersion",
     $Endpoint
@@ -126,6 +125,12 @@ function Test-GhEndpointEnabled {
   $ErrorActionPreference = $previousErrorActionPreference
   $text = ($raw | Out-String).Trim()
   if ($exitCode -eq 0) {
+    if (-not [string]::IsNullOrWhiteSpace($text)) {
+      $payload = $text | ConvertFrom-Json
+      if ($null -ne $payload.enabled) {
+        return [bool] $payload.enabled
+      }
+    }
     return $true
   }
   if ($text -match "HTTP 404") {
@@ -217,6 +222,7 @@ $desiredRepository = [ordered]@{
   squash_merge_commit_title = "PR_TITLE"
   squash_merge_commit_message = "PR_BODY"
   security_and_analysis = [ordered]@{
+    dependabot_security_updates = @{ status = "enabled" }
     secret_scanning = @{ status = "enabled" }
     secret_scanning_push_protection = @{ status = "enabled" }
   }
@@ -231,6 +237,7 @@ $repositoryDrift = (
   -not $repositoryState.allow_update_branch -or
   $repositoryState.squash_merge_commit_title -ne "PR_TITLE" -or
   $repositoryState.squash_merge_commit_message -ne "PR_BODY" -or
+  $repositoryState.security_and_analysis.dependabot_security_updates.status -ne "enabled" -or
   $repositoryState.security_and_analysis.secret_scanning.status -ne "enabled" -or
   $repositoryState.security_and_analysis.secret_scanning_push_protection.status -ne "enabled"
 )

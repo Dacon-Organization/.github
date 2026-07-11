@@ -89,7 +89,6 @@ function Test-GhEndpointEnabled {
   $arguments = @(
     "api",
     "--method", "GET",
-    "--silent",
     "-H", "Accept: application/vnd.github+json",
     "-H", "X-GitHub-Api-Version: $apiVersion",
     $Endpoint
@@ -101,6 +100,12 @@ function Test-GhEndpointEnabled {
   $ErrorActionPreference = $previousErrorActionPreference
   $text = ($raw | Out-String).Trim()
   if ($exitCode -eq 0) {
+    if (-not [string]::IsNullOrWhiteSpace($text)) {
+      $payload = $text | ConvertFrom-Json
+      if ($null -ne $payload.enabled) {
+        return [bool] $payload.enabled
+      }
+    }
     return $true
   }
   if ($text -match "HTTP 404") {
@@ -127,6 +132,7 @@ Add-Check ([bool] $repositoryState.delete_branch_on_merge) "merge 후 branch 삭
 Add-Check ([bool] $repositoryState.allow_update_branch) "Update branch가 비활성입니다."
 Add-Check ($repositoryState.squash_merge_commit_title -eq "PR_TITLE") "squash 제목 정책이 PR_TITLE이 아닙니다."
 Add-Check ($repositoryState.squash_merge_commit_message -eq "PR_BODY") "squash 본문 정책이 PR_BODY가 아닙니다."
+Add-Check ($repositoryState.security_and_analysis.dependabot_security_updates.status -eq "enabled") "Dependabot security updates가 비활성입니다."
 Add-Check ($repositoryState.security_and_analysis.secret_scanning.status -eq "enabled") "secret scanning이 비활성입니다."
 Add-Check ($repositoryState.security_and_analysis.secret_scanning_push_protection.status -eq "enabled") "push protection이 비활성입니다."
 
