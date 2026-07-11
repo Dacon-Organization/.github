@@ -17,20 +17,20 @@ concurrency:
 jobs:
   docs:
     name: 문서
-    uses: Dacon-Organization/.github/.github/workflows/reusable-docs-ci.yml@__CENTRAL_WORKFLOW_SHA__
+    uses: Dacon-Organization/.github/.github/workflows/reusable-docs-ci.yml@2a8d7d325785b2c2c09660f5b8c1e1e06a2d8dd2 # bootstrap 2026-07-11
     permissions:
       contents: read
 
   policy:
     name: PR 정책
     if: ${{ github.event_name == 'pull_request' }}
-    uses: Dacon-Organization/.github/.github/workflows/reusable-pr-policy.yml@__CENTRAL_WORKFLOW_SHA__
+    uses: Dacon-Organization/.github/.github/workflows/reusable-pr-policy.yml@2a8d7d325785b2c2c09660f5b8c1e1e06a2d8dd2 # bootstrap 2026-07-11
     permissions: {}
 
   dependency-review:
     name: 의존성 검토
     if: ${{ github.event_name == 'pull_request' }}
-    uses: Dacon-Organization/.github/.github/workflows/reusable-dependency-review.yml@__CENTRAL_WORKFLOW_SHA__
+    uses: Dacon-Organization/.github/.github/workflows/reusable-dependency-review.yml@2a8d7d325785b2c2c09660f5b8c1e1e06a2d8dd2 # bootstrap 2026-07-11
     permissions:
       contents: read
 
