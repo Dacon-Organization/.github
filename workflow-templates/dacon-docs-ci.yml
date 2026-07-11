@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [$default-branch]
+  push:
+    branches: [$default-branch]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.repository }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    name: 문서
+    uses: Dacon-Organization/.github/.github/workflows/reusable-docs-ci.yml@__CENTRAL_WORKFLOW_SHA__
+    permissions:
+      contents: read
+
+  policy:
+    name: PR 정책
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: Dacon-Organization/.github/.github/workflows/reusable-pr-policy.yml@__CENTRAL_WORKFLOW_SHA__
+    permissions: {}
+
+  dependency-review:
+    name: 의존성 검토
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: Dacon-Organization/.github/.github/workflows/reusable-dependency-review.yml@__CENTRAL_WORKFLOW_SHA__
+    permissions:
+      contents: read
+
+  ci-gate:
+    name: CI / gate
+    if: ${{ always() }}
+    needs: [docs]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - env:
+          DOCS_RESULT: ${{ needs.docs.result }}
+        run: test "$DOCS_RESULT" = "success"
+
+  policy-gate:
+    name: PR Policy / gate
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [policy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - env:
+          POLICY_RESULT: ${{ needs.policy.result }}
+        run: test "$POLICY_RESULT" = "success"
+
+  dependency-review-gate:
+    name: Dependency Review / gate
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [dependency-review]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - env:
+          DEPENDENCY_RESULT: ${{ needs.dependency-review.result }}
+        run: test "$DEPENDENCY_RESULT" = "success"

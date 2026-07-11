@@ -1,0 +1,90 @@
+name: Reusable PR Policy
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: 제목과 브랜치 검사
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_ACTOR: ${{ github.actor }}
+          REPORT_FILE: ${{ runner.temp }}/pr-policy/report.txt
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          errors = []
+          event = os.environ["EVENT_NAME"]
+          title = os.environ.get("PR_TITLE", "")
+          branch = os.environ.get("HEAD_BRANCH", "")
+          actor = os.environ.get("PR_ACTOR", "").lower()
+          report = pathlib.Path(os.environ["REPORT_FILE"])
+          report.parent.mkdir(parents=True, exist_ok=True)
+
+          title_pattern = re.compile(
+              r"^\[(feat|fix|docs|style|refactor|test|chore|ci|perf|design|data|init)\] "
+              r"\S(?:.*\S)?$"
+          )
+          branch_pattern = re.compile(
+              r"^(feature|fix|docs|refactor|test|chore|ci|experiment|hotfix|release)/"
+              r"[a-z0-9]+(?:-[a-z0-9]+)+$"
+          )
+
+          if event != "pull_request":
+              errors.append("PR Policy는 pull_request caller에서만 호출해야 합니다.")
+
+          if actor == "dependabot[bot]":
+              if not branch.startswith("dependabot/"):
+                  errors.append("Dependabot actor와 브랜치가 일치하지 않습니다.")
+          else:
+              if not title_pattern.fullmatch(title):
+                  errors.append("PR 제목은 [type] 설명 형식이어야 합니다.")
+              if len(title) > 100:
+                  errors.append("PR 제목은 100자를 넘을 수 없습니다.")
+              if not branch_pattern.fullmatch(branch):
+                  errors.append("브랜치는 type/<github-id>-<description> 형식이어야 합니다.")
+              elif not branch.split("/", 1)[1].startswith(f"{actor}-"):
+                  errors.append("브랜치의 github-id가 PR actor와 일치하지 않습니다.")
+
+          report.write_text(
+              "\n".join(errors) if errors else "PR 정책 통과\n",
+              encoding="utf-8",
+          )
+          if errors:
+              raise SystemExit("\n".join(errors))
+          PY
+
+      - name: 실패 artifact 업로드
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-policy-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pr-policy
+          if-no-files-found: error
+          retention-days: 7
+
+  gate:
+    name: gate
+    if: ${{ always() }}
+    needs: [validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: 결과 집계
+        shell: bash
+        env:
+          VALIDATE_RESULT: ${{ needs.validate.result }}
+        run: test "$VALIDATE_RESULT" = "success"

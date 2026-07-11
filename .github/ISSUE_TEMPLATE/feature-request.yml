@@ -1,0 +1,36 @@
+name: Feature request
+description: 해결할 문제와 완료 조건을 중심으로 개선을 제안합니다.
+title: "[feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제
+      description: 현재 무엇이 어렵고 누구에게 영향을 주는지 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안 방식
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 고려한 대안
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 조건
+      placeholder: 검증 가능한 항목으로 작성해 주세요.
+    validations:
+      required: true

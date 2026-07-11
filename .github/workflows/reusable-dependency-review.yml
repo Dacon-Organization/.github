@@ -1,0 +1,75 @@
+name: Reusable Dependency Review
+
+on:
+  workflow_call:
+    inputs:
+      fail-on-severity:
+        required: false
+        type: string
+        default: high
+      artifact-retention-days:
+        required: false
+        type: number
+        default: 7
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: 의존성 변경 검토
+        id: review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: ${{ inputs.fail-on-severity }}
+          fail-on-scopes: runtime, development, unknown
+          license-check: false
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 120
+          show-patched-versions: true
+          comment-summary-in-pr: never
+
+      - name: 실패 보고서 생성
+        if: ${{ failure() }}
+        shell: bash
+        env:
+          VULNERABLE: ${{ steps.review.outputs.vulnerable-changes }}
+          INVALID_LICENSES: ${{ steps.review.outputs.invalid-license-changes }}
+          DENIED: ${{ steps.review.outputs.denied-changes }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/dependency-review"
+          printf '%s' "$VULNERABLE" > "$RUNNER_TEMP/dependency-review/vulnerable.json"
+          printf '%s' "$INVALID_LICENSES" > "$RUNNER_TEMP/dependency-review/invalid-licenses.json"
+          printf '%s' "$DENIED" > "$RUNNER_TEMP/dependency-review/denied.json"
+
+      - name: 실패 artifact 업로드
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-review-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dependency-review
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.artifact-retention-days }}
+
+  gate:
+    name: gate
+    if: ${{ always() }}
+    needs: [review]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: 결과 집계
+        shell: bash
+        env:
+          REVIEW_RESULT: ${{ needs.review.result }}
+        run: test "$REVIEW_RESULT" = "success"
