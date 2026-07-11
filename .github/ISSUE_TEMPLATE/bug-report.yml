@@ -1,0 +1,51 @@
+name: Bug report
+description: 재현 가능한 오류를 보고합니다.
+title: "[bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        비밀정보와 개인정보는 제거하고 최소 재현을 제공해 주세요.
+  - type: input
+    id: commit
+    attributes:
+      label: 대상 저장소와 commit
+      placeholder: Dacon-Organization/example @ 0123456
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 재현 절차
+      description: 가장 작은 입력과 순서대로 실행한 명령을 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 결과
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 결과와 로그
+      description: 토큰, 개인정보와 민감한 데이터는 마스킹하세요.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 환경
+      placeholder: Windows 11, Python 3.11, 패키지 버전
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 확인
+      options:
+        - label: 중복 이슈를 검색했습니다.
+          required: true
+        - label: 비밀정보와 개인정보를 제거했습니다.
+          required: true

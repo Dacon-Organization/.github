@@ -1,0 +1,83 @@
+name: Reusable Docs CI
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        required: false
+        type: string
+        default: "."
+      markdown-globs:
+        required: false
+        type: string
+        default: |
+          **/*.md
+          !**/.venv/**
+          !**/node_modules/**
+      check-links:
+        required: false
+        type: boolean
+        default: true
+      lychee-args:
+        required: false
+        type: string
+        default: --offline --no-progress './**/*.md'
+      artifact-retention-days:
+        required: false
+        type: number
+        default: 7
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    name: docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25 # v24.0.0
+        with:
+          globs: ${{ inputs.markdown-globs }}
+
+      - name: 내부 링크 검사
+        if: ${{ inputs.check-links }}
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: ${{ inputs.lychee-args }}
+          fail: true
+          failIfEmpty: false
+          format: markdown
+          jobSummary: true
+          lycheeVersion: v0.24.2
+          output: lychee-report.md
+          workingDirectory: ${{ inputs.working-directory }}
+
+      - name: 실패 artifact 업로드
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ inputs.working-directory }}/lychee-report.md
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.artifact-retention-days }}
+
+  gate:
+    name: gate
+    if: ${{ always() }}
+    needs: [docs]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: 결과 집계
+        shell: bash
+        env:
+          DOCS_RESULT: ${{ needs.docs.result }}
+        run: test "$DOCS_RESULT" = "success"
