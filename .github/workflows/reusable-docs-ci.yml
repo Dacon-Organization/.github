@@ -37,12 +37,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Markdown lint
-        uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25 # v24.0.0
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
         with:
           globs: ${{ inputs.markdown-globs }}
 
@@ -61,7 +61,7 @@ jobs:
 
       - name: 실패 artifact 업로드
         if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-failure-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ inputs.working-directory }}/lychee-report.md
